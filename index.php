@@ -16,5 +16,5 @@ $signature);
 foreach ($events as $event){
   $bot->replyText($event->getReplyToken(), 'TextMessage');
 }
-  )])
+
 ?>
