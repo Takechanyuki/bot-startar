@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . ':/app/.heroku/php/lib/php';
+require_once __DIR__ . 'heroku/php/lib/php';
 $httpClient = new \LINE\LINEBot\HTTPClient\CurlHTTPClient(getenv
 ('CHANNEL_ACCESS_TOKEN'));
 
