@@ -1,28 +1,64 @@
 <?php
+// まずは HTTPステータス 200 を返す
+http_response_code(200) ;
+echo '200 {}';
 
-//Composerでインストールしたライブラリを一括読み込み
-require_once__DIR__.'/vendor/autoload.php';
+// 送られて来たJSONデータを取得
+$json_string = file_get_contents('php://input');
+$json = json_decode($json_string);
+// JSONデータから返信先を取得
+$replyToken = $json->events[0]->replyToken;
+// JSONデータから送られてきたメッセージを取得
+$message = $json->events[0]->message->text;
 
-//アクセストークンを使いCurlHTTPClientをインスタンス化
-$httpClient = new \LINE\LINEBot\HTTPClient\CurlHTTPClient(getenv
-('CHANNEL_ACCESS_TOKEN'));
+// HTTPヘッダを設定
+$channelToken = 'メモした アクセストークン の文字列';
+$headers = [
+	'Authorization: Bearer ' . $channelToken,
+	'Content-Type: application/json; charset=utf-8',
+];
 
-//CurlHTTPClientとシークレットを使いLINEBotをインスタンス化
-$bot = new \LINE\LINEBot($httpClient, ['channelSerect' => getenv(
-  'CHANNEL_SECRET')]);
+// POSTデータを設定してJSONにエンコード
+$post = [
+	'replyToken' => $replyToken,
+	'messages' => [
+		[
+			'type' => 'text',
+			'text' => '「' . $message . '」',
+		],
+	],
+];
+$post = json_encode($post);
 
-//LINE Messenging APIがリウエストに付与した署名を取得
-$signature = $_SERVER['HTTP_'.\LINE\LINEBot\Constant\HTTPHeader
-::LINE_SIGNATURE];
+// HTTPリクエストを設定
+$ch = curl_init('https://api.line.me/v2/bot/message/reply');
+$options = [
+	CURLOPT_CUSTOMREQUEST => 'POST',
+	CURLOPT_HTTPHEADER => $headers,
+	CURLOPT_RETURNTRANSFER => true,
+	CURLOPT_BINARYTRANSFER => true,
+	CURLOPT_HEADER => true,
+	CURLOPT_POSTFIELDS => $post,
+];
 
-//署名が正当かチェック。正当であればリクエスをパースし配列へ
-$events = $bot->parseEventRequest(file_get_contents('php://input'),
-$signature);
+// 実行
+curl_setopt_array($ch, $options);
 
-//配列に格納された各イベントをループで処理
-foreach ($events as $event){
-  //テキストを返信
-  $bot->replyText($event->getReplyToken(), 'TextMessage');
-}  
+// エラーチェック
+$result = curl_exec($ch);
+$errno = curl_errno($ch);
+if ($errno) {
+	return;
+}
+
+// HTTPステータスを取得
+$info = curl_getinfo($ch);
+$httpStatus = $info['http_code'];
+
+$responseHeaderSize = $info['header_size'];
+$body = substr($result, $responseHeaderSize);
+
+// 200 だったら OK
+echo $httpStatus . ' ' . $body;
 
 ?>
